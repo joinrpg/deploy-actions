@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+
+jobs:
+  actionlint:
+    name: Lint workflows and actions
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Run actionlint
+        run: docker run -v "${{ github.workspace }}:/repo" --workdir /repo rhysd/actionlint:latest -shellcheck=
+
+  fixtures:
+    name: Fixture tests
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v5
+        with:
+          version: v1.35.9
+
+      # Следующие задачи добавляют fixture-тесты в tests/.
+      # Пока каталога нет — шаг-заглушка держит job зелёной.
+      - name: Check fixtures directory
+        if: always()
+        run: |
+          if [ -d tests/fixtures ]; then
+            ls -R tests/fixtures
+          else
+            echo "No fixtures yet — skeleton stage"
+          fi
