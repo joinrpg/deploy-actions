@@ -1,0 +1,64 @@
+name: Publish .NET containers
+description: >-
+  Собирает образы через dotnet publish /t:PublishContainer (образы собираются
+  SDK в локальный docker — обход внутреннего Location Selectel CR) и пушит их
+  в registry с тегами версии и (опционально) latest.
+
+inputs:
+  projects:
+    description: >-
+      Multiline-список '<имя-образа>=<путь-к-csproj>'. Имя образа — значение
+      ContainerRepository из csproj (например, joinrpg/bastilia-rating).
+    required: true
+  version:
+    description: Версия для тега образов и -p:Version.
+    required: true
+  registry:
+    description: Registry host для пуша.
+    required: false
+    default: cr.selcloud.ru
+  push-latest:
+    description: Пушить ли тег latest вместе с версией.
+    required: false
+    default: 'true'
+  extra-publish-args:
+    description: Дополнительные аргументы dotnet publish (например, --no-build).
+    required: false
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    - name: dotnet publish /t:PublishContainer
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        while IFS= read -r line; do
+          [ -z "$line" ] && continue
+          image_name="${line%%=*}"
+          project="${line#*=}"
+
+          dotnet publish --os linux --arch x64 -c Release /t:PublishContainer \
+            "$project" -p:Version='${{ inputs.version }}' ${{ inputs.extra-publish-args }}
+        done <<< '${{ inputs.projects }}'
+
+    - name: docker push
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        tags=( '${{ inputs.version }}' )
+        if [ '${{ inputs.push-latest }}' = 'true' ]; then
+          tags+=( 'latest' )
+        fi
+
+        while IFS= read -r line; do
+          [ -z "$line" ] && continue
+          image_name="${line%%=*}"
+
+          for tag in "${tags[@]}"; do
+            docker tag "${image_name}:${tag}" '${{ inputs.registry }}/${image_name}':'${tag}'
+            docker push --quiet '${{ inputs.registry }}/${image_name}':'${tag}'
+          done
+        done <<< '${{ inputs.projects }}'

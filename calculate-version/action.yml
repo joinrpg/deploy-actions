@@ -1,0 +1,37 @@
+name: Calculate version
+description: >-
+  Считает semver-версию из git-истории по GitHubFlow (скрипт HandyPoshScripts
+  SemVerCalc_GitHubFlow_Actions, v1.0.2, закоммичен в action — не скачивается
+  через iex). Пишет CALCULATED_VERSION и CALCULATED_VERSION_IS_RELEASE в env
+  job'а (как прежде) и дублирует их в outputs action'а.
+
+inputs:
+  ref-name:
+    description: Имя ref (github.ref_name) — ветка или тег вида v1.2.3.
+    required: true
+  ref-type:
+    description: Тип ref (github.ref_type) — branch или tag.
+    required: true
+
+outputs:
+  version:
+    description: Семвер-версия (например, 1.2.3 или 1.2.3-branch-c5+sha.abc123).
+    value: ${{ steps.calc.outputs.version }}
+  is-release:
+    description: 'True, если ref — релизный тег.'
+    value: ${{ steps.calc.outputs.is-release }}
+
+runs:
+  using: composite
+  steps:
+    - name: Calculate version
+      id: calc
+      shell: pwsh
+      env:
+        REF_NAME: ${{ inputs.ref-name }}
+        REF_TYPE: ${{ inputs.ref-type }}
+      run: |
+        & "${{ github.action_path }}/SemVerCalc_GitHubFlow_Actions.ps1"
+
+        "version=$env:CALCULATED_VERSION" >> $env:GITHUB_OUTPUT
+        "is-release=$env:CALCULATED_VERSION_IS_RELEASE" >> $env:GITHUB_OUTPUT
