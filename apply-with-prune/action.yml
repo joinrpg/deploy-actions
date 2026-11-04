@@ -12,7 +12,9 @@ inputs:
     description: >-
       Селектор метки для --prune (можно полный selector вида key=value).
       Ресурсы с этой меткой, отсутствующие в manifests-dir, будут удалены.
-    required: true
+      Единая конвенция метки для всех проектов: managed-by-kustomize=true.
+    required: false
+    default: managed-by-kustomize=true
   manifests-dir:
     description: Каталог с отрендеренными манифестами (выход render-deploy-manifests).
     required: false
