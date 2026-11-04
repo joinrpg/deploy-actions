@@ -20,9 +20,18 @@ runs:
   using: composite
   steps:
     - name: Write secrets to env file
-      uses: shine1594/secrets-to-env-action@v1.7.0
-      with:
-        secrets: ${{ inputs.secrets-json }}
-        secrets_env: all
-        prefix: ${{ inputs.prefix }}
-        file_name: ${{ inputs.output-file }}
+      shell: bash
+      env:
+        SECRETS_JSON: ${{ inputs.secrets-json }}
+        PREFIX: ${{ inputs.prefix }}
+        OUTPUT_FILE: ${{ inputs.output-file }}
+      run: |
+        set -euo pipefail
+
+        echo "$SECRETS_JSON" | jq -r --arg prefix "$PREFIX" '
+          to_entries[]
+          | select(.key | startswith($prefix))
+          | "\(.key | ltrimstr($prefix))=\(.value)"' > "$OUTPUT_FILE"
+
+        count=$(grep -c . "$OUTPUT_FILE" || true)
+        echo "Wrote $count secret(s) with prefix $PREFIX to $OUTPUT_FILE"
