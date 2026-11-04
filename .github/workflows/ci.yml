@@ -85,35 +85,25 @@ jobs:
           echo "$yaml" | grep -q 'newName: index.docker.io/library/busybox'
           echo "$yaml" | grep -q 'newTag: latest@sha256:'
 
-      - name: secrets-to-kustomize-env action must exist
-        run: test -f secrets-to-kustomize-env/action.yml
+      - name: render-deploy-manifests action must exist
+        run: test -f render-deploy-manifests/action.yml
 
-      - name: render-kustomize action must exist
-        run: test -f render-kustomize/action.yml
-
-      - name: secrets-to-kustomize-env writes prefixed secrets only
-        uses: ./secrets-to-kustomize-env
-        with:
-          secrets-json: '{"KUBESECRET_FROM_ACTION":"action-value","OTHER_SECRET":"must-not-appear"}'
-          prefix: KUBESECRET_
-          output-file: tests/fixtures/overlays/test/test.secret.env
-
-      - name: Assert env file contents
-        run: |
-          cat tests/fixtures/overlays/test/test.secret.env
-          grep -q '^FROM_ACTION=action-value$' tests/fixtures/overlays/test/test.secret.env
-          ! grep -q 'OTHER_SECRET\|must-not-appear' tests/fixtures/overlays/test/test.secret.env
-
-      - name: render-kustomize builds overlay
-        uses: ./render-kustomize
+      - name: render-deploy-manifests builds overlay from secrets and images
+        uses: ./render-deploy-manifests
         with:
           overlay-path: tests/fixtures/overlays/test
           secret-name: bastilia-rating-secret
-          secret-env-file: tests/fixtures/overlays/test/test.secret.env
+          secrets-json: '{"KUBESECRET_FROM_ACTION":"action-value","OTHER_SECRET":"must-not-appear"}'
           images-yaml: |
             - name: bastilia-rating
               newName: cr.selcloud.ru/joinrpg/bastilia-rating
               newTag: 1.0.0@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+
+      - name: Assert env file contents
+        run: |
+          cat tests/fixtures/overlays/test/bastilia-rating-secret.env
+          grep -q '^FROM_ACTION=action-value$' tests/fixtures/overlays/test/bastilia-rating-secret.env
+          ! grep -q 'OTHER_SECRET\|must-not-appear' tests/fixtures/overlays/test/bastilia-rating-secret.env
 
       - name: Assert rendered manifests
         run: |
