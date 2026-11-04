@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bastilia-rating
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bastilia-rating
+  template:
+    metadata:
+      labels:
+        app: bastilia-rating
+    spec:
+      containers:
+      - name: bastilia-rating
+        image: bastilia-rating
+        envFrom:
+        - secretRef:
+            name: bastilia-rating-secret
