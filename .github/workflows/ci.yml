@@ -64,3 +64,23 @@ jobs:
             exit 1
           fi
           echo "selectel-cr-login failed as expected"
+
+      - name: resolve-image-digests action must exist
+        run: test -f resolve-image-digests/action.yml
+
+      - name: resolve-image-digests resolves public image digest
+        id: resolve-digests
+        uses: ./resolve-image-digests
+        with:
+          version: latest
+          registry: index.docker.io
+          images: |
+            busybox=library/busybox
+
+      - name: Assert resolved digest output
+        run: |
+          yaml="${{ steps.resolve-digests.outputs.images-yaml }}"
+          echo "$yaml"
+          echo "$yaml" | grep -q -- '- name: busybox'
+          echo "$yaml" | grep -q 'newName: index.docker.io/library/busybox'
+          echo "$yaml" | grep -q 'newTag: latest@sha256:'
