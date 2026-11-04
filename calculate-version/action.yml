@@ -33,5 +33,11 @@ runs:
       run: |
         & "${{ github.action_path }}/SemVerCalc_GitHubFlow_Actions.ps1"
 
-        "version=$env:CALCULATED_VERSION" >> $env:GITHUB_OUTPUT
-        "is-release=$env:CALCULATED_VERSION_IS_RELEASE" >> $env:GITHUB_OUTPUT
+        # Скрипт пишет версию в GITHUB_ENV, но раннер применяет его только между
+        # шагами — значения подхватываем из файла сами.
+        $envLines = Get-Content $env:GITHUB_ENV
+        $version = ($envLines | Where-Object { $_.StartsWith('CALCULATED_VERSION=') } | Select-Object -Last 1).Substring('CALCULATED_VERSION='.Length)
+        $isRelease = ($envLines | Where-Object { $_.StartsWith('CALCULATED_VERSION_IS_RELEASE=') } | Select-Object -Last 1).Substring('CALCULATED_VERSION_IS_RELEASE='.Length)
+
+        "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+        "is-release=$isRelease" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
