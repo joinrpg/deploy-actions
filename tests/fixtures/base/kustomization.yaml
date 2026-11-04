@@ -7,4 +7,3 @@ secretGenerator:
 - name: bastilia-rating-secret
   envs:
   - bastilia-rating-secret.env
-  behavior: replace
