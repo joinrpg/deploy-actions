@@ -110,3 +110,45 @@ jobs:
           ls kustomize_output
           grep -rq 'cr.selcloud.ru/joinrpg/bastilia-rating:1.0.0@sha256:aaaa' kustomize_output
           grep -rq 'YWN0aW9uLXZhbHVl' kustomize_output
+
+      - name: apply-with-prune action must exist
+        run: test -f apply-with-prune/action.yml
+
+      - name: Point kubectl at unreachable API server
+        run: |
+          cat > /tmp/fake-kubeconfig <<'EOF'
+          apiVersion: v1
+          kind: Config
+          clusters:
+          - cluster:
+              server: https://example.invalid
+            name: fake
+          contexts:
+          - context:
+              cluster: fake
+              user: fake
+            name: fake
+          current-context: fake
+          users:
+          - name: fake
+            user: {}
+          EOF
+          echo "KUBECONFIG=/tmp/fake-kubeconfig" >> "$GITHUB_ENV"
+
+      - name: apply-with-prune fails against unreachable cluster
+        id: apply-prune
+        uses: ./apply-with-prune
+        continue-on-error: true
+        with:
+          namespace: fixture-ns
+          prune-selector: managed-by-kustomize=true
+          manifests-dir: kustomize_output
+          rollout-deployments: bastilia-rating
+
+      - name: Assert previous step failed
+        run: |
+          if [ "${{ steps.apply-prune.outcome }}" != "failure" ]; then
+            echo "::error::apply-with-prune unexpectedly succeeded with unreachable cluster"
+            exit 1
+          fi
+          echo "apply-with-prune failed as expected"
