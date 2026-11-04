@@ -156,10 +156,25 @@ jobs:
           fi
           echo "apply-with-prune failed as expected"
 
-      - name: run-db-migrations action must exist
-        run: test -f run-db-migrations/action.yml && test -f run-db-migrations/wait-migration.ps1
+      - name: calculate-version action must exist
+        run: test -f calculate-version/action.yml
 
-      - name: wait-migration.ps1 parses and is parameterized
+      - name: calculate-version returns semver for release tag
+        id: calc-version
+        uses: ./calculate-version
+        with:
+          ref-name: v1.0.0
+          ref-type: tag
+
+      - name: Assert calculated version
+        run: |
+          version="${{ steps.calc-version.outputs.version }}"
+          echo "version=$version"
+          test "$version" = "1.0.0"
+          test "${{ steps.calc-version.outputs.is-release }}" = "True"
+
+      - name: run-db-migrations action must exist
+        run: test -f run-db-migrations/action.yml && test -f run-db-migrations/wait-migration.ps1      - name: wait-migration.ps1 parses and is parameterized
         shell: pwsh
         run: |
           $tokens = $null; $errors = $null
