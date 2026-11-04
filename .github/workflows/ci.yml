@@ -76,14 +76,17 @@ jobs:
           registry: index.docker.io
           images: |
             busybox=library/busybox
+            alpine=library/alpine
 
       - name: Assert resolved digest output
         run: |
           yaml="${{ steps.resolve-digests.outputs.images-yaml }}"
           echo "$yaml"
-          echo "$yaml" | grep -q -- '- name: busybox'
+          echo "$yaml" | grep -q -- '- name: busybox$'
           echo "$yaml" | grep -q 'newName: index.docker.io/library/busybox'
           echo "$yaml" | grep -q 'newTag: latest@sha256:'
+          echo "$yaml" | grep -q -- '- name: alpine$'
+          echo "$yaml" | grep -q 'newName: index.docker.io/library/alpine'
 
       - name: render-deploy-manifests action must exist
         run: test -f render-deploy-manifests/action.yml
