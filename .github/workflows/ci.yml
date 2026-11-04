@@ -42,3 +42,19 @@ jobs:
             exit 1
           fi
           echo "setup-kubectl-context failed as expected"
+
+      - name: selectel-cr-login fails with garbage credentials
+        id: cr-login
+        uses: ./selectel-cr-login
+        continue-on-error: true
+        with:
+          username: definitely-not-a-real-user
+          password: definitely-not-a-real-password
+
+      - name: Assert previous step failed
+        run: |
+          if [ "${{ steps.cr-login.outcome }}" != "failure" ]; then
+            echo "::error::selectel-cr-login unexpectedly succeeded with garbage credentials"
+            exit 1
+          fi
+          echo "selectel-cr-login failed as expected"
