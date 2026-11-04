@@ -1,0 +1,28 @@
+name: Turn GitHub secrets into kustomize env file
+description: >-
+  Пишет GitHub-секреты окружения с заданным префиксом (по умолчанию KUBESECRET_)
+  в .env-файл для kustomize secretGenerator. Префикс при записи отбрасывается:
+  KUBESECRET_DB_PASSWORD становится DB_PASSWORD. Секреты без префикса игнорируются.
+
+inputs:
+  secrets-json:
+    description: Все секреты одним JSON — передавайте ${{ toJSON(secrets) }}.
+    required: true
+  prefix:
+    description: Префикс секретов, которые попадут в файл.
+    required: false
+    default: KUBESECRET_
+  output-file:
+    description: Путь к .env-файлу (относительно workspace).
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Write secrets to env file
+      uses: shine1594/secrets-to-env-action@v1.7.0
+      with:
+        secrets: ${{ inputs.secrets-json }}
+        secrets_env: all
+        prefix: ${{ inputs.prefix }}
+        file_name: ${{ inputs.output-file }}
