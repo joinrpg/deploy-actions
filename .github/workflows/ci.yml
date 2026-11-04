@@ -174,7 +174,9 @@ jobs:
           test "${{ steps.calc-version.outputs.is-release }}" = "True"
 
       - name: run-db-migrations action must exist
-        run: test -f run-db-migrations/action.yml && test -f run-db-migrations/wait-migration.ps1      - name: wait-migration.ps1 parses and is parameterized
+        run: test -f run-db-migrations/action.yml && test -f run-db-migrations/wait-migration.ps1
+
+      - name: wait-migration.ps1 parses and is parameterized
         shell: pwsh
         run: |
           $tokens = $null; $errors = $null
