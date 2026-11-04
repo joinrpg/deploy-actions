@@ -58,8 +58,11 @@ runs:
           docker pull --quiet "${registry}/${image_id}:${version}" > /dev/null
           digest=$(docker inspect --format='{{index .RepoDigests 0}}' "${registry}/${image_id}:${version}" | cut -d@ -f2)
 
-          output="${output}$(printf -- '- name: %s\n  newName: %s/%s\n  newTag: %s@%s\n' \
+          # Важно: $() съедает завершающий перевод строки — перевод добавляем явно,
+          # иначе записи образов склеиваются в одну строку (#6094).
+          output+="$(printf -- '- name: %s\n  newName: %s/%s\n  newTag: %s@%s' \
             "$kustomize_name" "$registry" "$image_id" "$version" "$digest")"
+          output+=$'\n'
         done <<< '${{ inputs.images }}'
 
         {
