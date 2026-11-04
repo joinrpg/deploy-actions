@@ -3,7 +3,6 @@ description: >-
   Пишет GitHub-секреты окружения с заданным префиксом (по умолчанию KUBESECRET_)
   в .env-файл для kustomize secretGenerator. Префикс при записи отбрасывается:
   KUBESECRET_DB_PASSWORD становится DB_PASSWORD. Секреты без префикса игнорируются.
-
 inputs:
   secrets-json:
     description: Все секреты одним JSON — вызывающий workflow передаёт toJSON(secrets).
