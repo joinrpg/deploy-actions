@@ -152,3 +152,24 @@ jobs:
             exit 1
           fi
           echo "apply-with-prune failed as expected"
+
+      - name: run-db-migrations action must exist
+        run: test -f run-db-migrations/action.yml && test -f run-db-migrations/wait-migration.ps1
+
+      - name: wait-migration.ps1 parses and is parameterized
+        shell: pwsh
+        run: |
+          $tokens = $null; $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            "run-db-migrations/wait-migration.ps1", [ref]$tokens, [ref]$errors) | Out-Null
+          if ($errors) { $errors | ForEach-Object { Write-Error $_ }; exit 1 }
+          $content = Get-Content run-db-migrations/wait-migration.ps1 -Raw
+          if ($content -match 'joinrpg-dal-migrate') {
+            Write-Error 'hardcoded job name joinrpg-dal-migrate found (must be parameterized)'
+            exit 1
+          }
+          if ($content -notmatch 'MIGRATION_JOB_NAME') {
+            Write-Error 'MIGRATION_JOB_NAME is not used'
+            exit 1
+          }
+          Write-Output "wait-migration.ps1 parses, parameterized"
