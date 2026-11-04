@@ -1,0 +1,38 @@
+name: Run DB migrations
+description: >-
+  Накатывает миграции БД как k8s-Job: заменяет сгенерированный секрет и Job
+  (kubectl replace --force --save-config), ждёт завершения Job (Complete/Failed),
+  при Failed дампит поды, падает по ошибочному событию (например, превышение
+  квоты namespace) и по клиентскому таймауту.
+
+inputs:
+  namespace:
+    description: Целевой k8s namespace.
+    required: true
+  job-name:
+    description: Имя Job'ы миграций в манифестах (например, bastilia-rating-migrator).
+    required: true
+  secret-glob:
+    description: Путь-шаблон к сгенерированному манифесту секрета в kustomize_output.
+    required: true
+  migration-manifest:
+    description: Путь к манифесту Job'ы миграций в kustomize_output.
+    required: true
+  timeout-minutes:
+    description: Клиентский таймаут ожидания Job.
+    required: false
+    default: '5'
+
+runs:
+  using: composite
+  steps:
+    - name: Apply migration secret and job, wait for completion
+      shell: pwsh
+      env:
+        MIGRATION_NAMESPACE: ${{ inputs.namespace }}
+        MIGRATION_JOB_NAME: ${{ inputs.job-name }}
+        MIGRATION_SECRET_GLOB: ${{ inputs.secret-glob }}
+        MIGRATION_MANIFEST: ${{ inputs.migration-manifest }}
+        MIGRATION_TIMEOUT_MINUTES: ${{ inputs.timeout-minutes }}
+      run: |
+        ${{ github.action_path }}/wait-migration.ps1
