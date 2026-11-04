@@ -1,0 +1,26 @@
+name: Log in to Selectel Container Registry
+description: >-
+  Логинит docker в Container Registry Selectel (cr.selcloud.ru) — обёртка над
+  docker/login-action с дефолтным registry.
+
+inputs:
+  username:
+    description: Имя сервисного пользователя CR (vars.SELECTEL_CR_USERNAME).
+    required: true
+  password:
+    description: Пароль сервисного пользователя CR (secrets.SELECTEL_CR_PASSWORD).
+    required: true
+  registry:
+    description: Адрес registry.
+    required: false
+    default: cr.selcloud.ru
+
+runs:
+  using: composite
+  steps:
+    - name: Log in to Container Registry
+      uses: docker/login-action@v4
+      with:
+        registry: ${{ inputs.registry }}
+        username: ${{ inputs.username }}
+        password: ${{ inputs.password }}
