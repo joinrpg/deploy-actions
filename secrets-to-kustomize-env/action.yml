@@ -6,7 +6,7 @@ description: >-
 
 inputs:
   secrets-json:
-    description: Все секреты одним JSON — передавайте ${{ toJSON(secrets) }}.
+    description: Все секреты одним JSON — вызывающий workflow передаёт toJSON(secrets).
     required: true
   prefix:
     description: Префикс секретов, которые попадут в файл.
