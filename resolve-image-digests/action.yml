@@ -1,0 +1,69 @@
+name: Resolve image digests
+description: >-
+  Пуллит образы из registry, резолвит их digest и отдаёт готовый блок `images:`
+  для kustomization (newTag вида `версия@digest` — защита от мутации тега,
+  google/k8s-digester-like). Формат строк входа images: `<kustomize-name>=<registry/image-id>`.
+
+inputs:
+  version:
+    description: Версия (тег) образов, например 1.2.3 или latest. Понижается в lowercase.
+    required: true
+  images:
+    description: >-
+      Multiline-список образов, по строке на образ: `<kustomize-name>=<registry/image-id>`.
+      kustomize-name — имя образа в манифестах (совпадает с `name:` в блоке images
+      kustomization), registry/image-id — путь образа в registry без registry host.
+    required: true
+  registry:
+    description: Registry host.
+    required: false
+    default: cr.selcloud.ru
+  cr-username:
+    description: Логин для docker login перед pull. Пусто — pull анонимный (публичные registry).
+    required: false
+    default: ''
+  cr-password:
+    description: Пароль для docker login перед pull. Пусто — pull анонимный.
+    required: false
+    default: ''
+
+outputs:
+  images-yaml:
+    description: Блок `images:` для kustomization (список newName/newTag).
+    value: ${{ steps.resolve.outputs.images-yaml }}
+
+runs:
+  using: composite
+  steps:
+    - name: Log in to registry (if credentials provided)
+      if: ${{ inputs.cr-username != '' }}
+      shell: bash
+      run: echo '${{ inputs.cr-password }}' | docker login '${{ inputs.registry }}' -u '${{ inputs.cr-username }}' --password-stdin
+
+    - name: Resolve digests
+      id: resolve
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        version=$(echo '${{ inputs.version }}' | tr '[:upper:]' '[:lower:]')
+        registry='${{ inputs.registry }}'
+
+        output=""
+        while IFS= read -r line; do
+          [ -z "$line" ] && continue
+          kustomize_name="${line%%=*}"
+          image_id="${line#*=}"
+
+          docker pull --quiet "${registry}/${image_id}:${version}" > /dev/null
+          digest=$(docker inspect --format='{{index .RepoDigests 0}}' "${registry}/${image_id}:${version}" | cut -d@ -f2)
+
+          output="${output}$(printf -- '- name: %s\n  newName: %s/%s\n  newTag: %s@%s\n' \
+            "$kustomize_name" "$registry" "$image_id" "$version" "$digest")"
+        done <<< '${{ inputs.images }}'
+
+        {
+          echo 'images-yaml<<IMAGES_YAML_EOF'
+          echo "$output"
+          echo 'IMAGES_YAML_EOF'
+        } >> "$GITHUB_OUTPUT"
