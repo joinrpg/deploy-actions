@@ -3,3 +3,8 @@ kind: Kustomization
 namespace: override-me
 resources:
 - deployment.yaml
+secretGenerator:
+- name: bastilia-rating-secret
+  envs:
+  - bastilia-rating-secret.env
+  behavior: replace
