@@ -1,0 +1,28 @@
+name: Setup kubectl context
+description: >-
+  Устанавливает kubectl v1.35.9 и настраивает kube context через YAML Secret токена
+  сервис-аккаунта (как kubectl -n kube-system get secret <sa>-token -o yaml).
+  Первый шаг любого деплоя в кластер Selectel.
+
+inputs:
+  k8s-url:
+    description: URL API-сервера кластера (vars.SELECTEL_K8S_SERVER).
+    required: true
+  deploy-sa-secret:
+    description: YAML объекта Secret с токеном сервис-аккаунта деплоя (secrets.SELECTEL_DEPLOY_SA_SECRET).
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Install kubectl
+      uses: azure/setup-kubectl@v5
+      with:
+        version: v1.35.9
+
+    - name: Set kube context
+      uses: azure/k8s-set-context@v5
+      with:
+        method: service-account
+        k8s-url: ${{ inputs.k8s-url }}
+        k8s-secret: ${{ inputs.deploy-sa-secret }}
