@@ -33,7 +33,7 @@ jobs:
         continue-on-error: true
         with:
           k8s-url: https://example.invalid
-          deploy-sa-secret: !!!not-base64!!!
+          deploy-sa-secret: '!!!not-base64!!!'
 
       - name: Assert previous step failed
         run: |
