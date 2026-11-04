@@ -27,13 +27,18 @@ jobs:
         with:
           version: v1.35.9
 
-      # Следующие задачи добавляют fixture-тесты в tests/.
-      # Пока каталога нет — шаг-заглушка держит job зелёной.
-      - name: Check fixtures directory
-        if: always()
+      - name: setup-kubectl-context fails with unreachable server
+        id: k8s-context
+        uses: ./setup-kubectl-context
+        continue-on-error: true
+        with:
+          k8s-url: https://example.invalid
+          deploy-sa-secret: !!!not-base64!!!
+
+      - name: Assert previous step failed
         run: |
-          if [ -d tests/fixtures ]; then
-            ls -R tests/fixtures
-          else
-            echo "No fixtures yet — skeleton stage"
+          if [ "${{ steps.k8s-context.outcome }}" != "failure" ]; then
+            echo "::error::setup-kubectl-context unexpectedly succeeded with garbage input"
+            exit 1
           fi
+          echo "setup-kubectl-context failed as expected"
