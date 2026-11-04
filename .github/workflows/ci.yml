@@ -27,6 +27,9 @@ jobs:
         with:
           version: v1.35.9
 
+      - name: setup-kubectl-context action must exist
+        run: test -f setup-kubectl-context/action.yml
+
       - name: setup-kubectl-context fails with unreachable server
         id: k8s-context
         uses: ./setup-kubectl-context
@@ -42,6 +45,9 @@ jobs:
             exit 1
           fi
           echo "setup-kubectl-context failed as expected"
+
+      - name: selectel-cr-login action must exist
+        run: test -f selectel-cr-login/action.yml
 
       - name: selectel-cr-login fails with garbage credentials
         id: cr-login
