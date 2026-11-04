@@ -85,7 +85,7 @@ jobs:
           echo "$yaml" | grep -q -- '- name: busybox$'
           echo "$yaml" | grep -q 'newName: index.docker.io/library/busybox'
           echo "$yaml" | grep -q 'newTag: latest@sha256:'
-          echo "$yaml" | grep -q -- '- name: alpine$'
+          echo "$yaml" | grep -q -- '^- name: alpine$'
           echo "$yaml" | grep -q 'newName: index.docker.io/library/alpine'
 
       - name: render-deploy-manifests action must exist
