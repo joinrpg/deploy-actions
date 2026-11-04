@@ -1,0 +1,64 @@
+name: Apply manifests with prune
+description: >-
+  Применяет отрендеренные манифесты через kubectl apply --prune с явным
+  allowlist (без кластерных ресурсов), затем ждёт rollout статуса перечисленных
+  deployment'ов.
+
+inputs:
+  namespace:
+    description: Целевой k8s namespace.
+    required: true
+  prune-selector:
+    description: >-
+      Селектор метки для --prune (можно полный selector вида key=value).
+      Ресурсы с этой меткой, отсутствующие в manifests-dir, будут удалены.
+    required: true
+  manifests-dir:
+    description: Каталог с отрендеренными манифестами (выход render-deploy-manifests).
+    required: false
+    default: kustomize_output
+  rollout-deployments:
+    description: Multiline-список имён deployment'ов для kubectl rollout status.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: kubectl apply --prune
+      shell: bash
+      run: |
+        set -euxo pipefail
+
+        # Prune удаляет всё с меткой prune-selector, чего нет в каталоге (например,
+        # старые сгенерированные секреты). Тот список, что у kubectl по умолчанию,
+        # но без кластерных (не-неймспейсных) ресурсов:
+        # https://github.com/kubernetes/kubernetes/blob/v1.24.0/staging/src/k8s.io/kubectl/pkg/util/prune/prune.go
+        kubectl apply \
+          -f '${{ inputs.manifests-dir }}' \
+          --prune \
+          -l '${{ inputs.prune-selector }}' \
+          --namespace '${{ inputs.namespace }}' \
+          --prune-allowlist=core/v1/ConfigMap \
+          --prune-allowlist=core/v1/Endpoints \
+          --prune-allowlist=core/v1/PersistentVolumeClaim \
+          --prune-allowlist=core/v1/Pod \
+          --prune-allowlist=core/v1/ReplicationController \
+          --prune-allowlist=core/v1/Secret \
+          --prune-allowlist=core/v1/Service \
+          --prune-allowlist=batch/v1/Job \
+          --prune-allowlist=batch/v1/CronJob \
+          --prune-allowlist=gateway.networking.k8s.io/v1/HTTPRoute \
+          --prune-allowlist=apps/v1/DaemonSet \
+          --prune-allowlist=apps/v1/Deployment \
+          --prune-allowlist=apps/v1/ReplicaSet \
+          --prune-allowlist=apps/v1/StatefulSet
+
+    - name: kubectl rollout status
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        while IFS= read -r deployment; do
+          [ -z "$deployment" ] && continue
+          kubectl rollout status "deployment/${deployment}" --namespace '${{ inputs.namespace }}'
+        done <<< '${{ inputs.rollout-deployments }}'
