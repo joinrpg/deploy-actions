@@ -1,0 +1,28 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - deployment.yaml
+  - service.yaml
+  - httproute.yaml
+  - pdp.yaml
+  - migration-job.yaml
+
+namespace: override-me
+
+# Единая метка для prune-selector'а deploy-actions (apply-with-prune по умолчанию
+# использует managed-by-kustomize=true). Для новых проектов двойная маркировка
+# не нужна — старая метка managed-by-<app>-<env> осталась только у мигрированных.
+# includeSelectors: true — метка попадает и в selector'ы (как раньше с commonLabels),
+# prune-контракт требует метку на всех подконтрольных ресурсах.
+labels:
+  - pairs:
+      managed-by-kustomize: "true"
+    includeSelectors: true
+
+# Пустой placeholder: render-deploy-manifests заменяет этот генератор своим
+# (behavior: replace), наполненным из KUBESECRET_* секретов окружения.
+secretGenerator:
+  - name: __APP_NAME__-secret
+    envs:
+      - __APP_NAME__-secret.env

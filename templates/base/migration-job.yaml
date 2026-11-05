@@ -1,0 +1,27 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: __APP_NAME__-migrator
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 300
+  template:
+    spec:
+      imagePullSecrets:
+        - name: craas-auth # создаёт интеграция кластера Selectel с Container Registry
+      containers:
+        - name: __APP_NAME__-migrator
+          envFrom:
+            - secretRef:
+                name: __APP_NAME__-secret
+                optional: false
+          image: __APP_NAME__-migrator
+          resources:
+            limits:
+              memory: 128Mi
+              cpu: 1000m
+              ephemeral-storage: 30Mi
+            requests:
+              memory: 128Mi
+              cpu: 250m
+      restartPolicy: Never
