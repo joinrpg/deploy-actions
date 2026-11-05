@@ -173,6 +173,63 @@ jobs:
           test "$version" = "1.0.0"
           test "${{ steps.calc-version.outputs.is-release }}" = "True"
 
+      - name: publish-dotnet-containers action must exist
+        run: test -f publish-dotnet-containers/action.yml
+
+      - name: Stub dotnet and docker to capture invocations
+        run: |
+          mkdir -p /tmp/stubs
+          printf '#!/bin/sh\necho "dotnet $*" >> /tmp/stubs/calls.log\nexit 0\n' > /tmp/stubs/dotnet
+          printf '#!/bin/sh\necho "docker $*" >> /tmp/stubs/calls.log\nif [ "$1" = "login" ]; then cat >> /tmp/stubs/stdin.log 2>/dev/null || true; fi\ncase "$*" in\n  *example.invalid*) exit 1 ;;\nesac\nexit 0\n' > /tmp/stubs/docker
+          chmod +x /tmp/stubs/dotnet /tmp/stubs/docker
+          echo "/tmp/stubs" >> "$GITHUB_PATH"
+          touch /tmp/stubs/calls.log /tmp/stubs/stdin.log
+
+      - name: publish-dotnet-containers expands names and tags (stubbed tools)
+        uses: ./publish-dotnet-containers
+        with:
+          projects: |
+            fixture-app=./src/Fixture.App/Fixture.App.csproj
+            fixture-app-migrator=./src/Fixture.App.Migrator/Fixture.App.Migrator.csproj
+          version: 1.2.3
+          push-latest: 'false'
+
+      - name: Assert docker invocations used expanded names
+        run: |
+          cat /tmp/stubs/calls.log
+          # Регрессия: одинарные кавычки гасили раскрытие переменных и docker получал
+          # буквальный текст вида cr.selcloud.ru/${image_name}:${tag}.
+          ! grep -qF '${image_name}' /tmp/stubs/calls.log
+          ! grep -qF '${tag}' /tmp/stubs/calls.log
+          grep -q 'docker tag fixture-app:1.2.3 cr.selcloud.ru/fixture-app:1.2.3' /tmp/stubs/calls.log
+          grep -q 'docker push --quiet cr.selcloud.ru/fixture-app-migrator:1.2.3' /tmp/stubs/calls.log
+
+      - name: resolve-image-digests login passes password via env, not interpolation
+        uses: ./resolve-image-digests
+        continue-on-error: true
+        id: resolve-login
+        with:
+          version: latest
+          registry: example.invalid
+          cr-username: fixture-user
+          cr-password: "pa'ss\\word"
+          images: fixture-app=library/busybox
+
+      - name: Assert login step parsed the quoted password
+        run: |
+          # Старая версия интерполировала пароль внутрь single-quoted строки —
+          # кавычка в пароле давала syntax error уже на парсинге bash.
+          # Ожидаем: шаг дошёл до docker login и упал на нём (stub падает на
+          # example.invalid), а не на синтаксисе.
+          if [ "${{ steps.resolve-login.outcome }}" != "failure" ]; then
+            echo "::error::resolve-image-digests login step did not run/fail as expected"
+            exit 1
+          fi
+          # docker login был вызван с правильными аргументами
+          grep -q 'docker login example.invalid -u fixture-user --password-stdin' /tmp/stubs/calls.log
+          # пароль доехал до stdin целиком, без обрезки по кавычке
+          grep -q "pa'ss.word" /tmp/stubs/stdin.log
+
       - name: run-db-migrations action must exist
         run: test -f run-db-migrations/action.yml && test -f run-db-migrations/wait-migration.ps1
 

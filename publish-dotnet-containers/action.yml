@@ -58,7 +58,7 @@ runs:
           image_name="${line%%=*}"
 
           for tag in "${tags[@]}"; do
-            docker tag "${image_name}:${tag}" '${{ inputs.registry }}/${image_name}':'${tag}'
-            docker push --quiet '${{ inputs.registry }}/${image_name}':'${tag}'
+            docker tag "${image_name}:${tag}" "${{ inputs.registry }}/${image_name}:${tag}"
+            docker push --quiet "${{ inputs.registry }}/${image_name}:${tag}"
           done
         done <<< '${{ inputs.projects }}'

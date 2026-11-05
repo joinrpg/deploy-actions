@@ -38,7 +38,13 @@ runs:
     - name: Log in to registry (if credentials provided)
       if: ${{ inputs.cr-username != '' }}
       shell: bash
-      run: echo '${{ inputs.cr-password }}' | docker login '${{ inputs.registry }}' -u '${{ inputs.cr-username }}' --password-stdin
+      env:
+        # Через env, а не интерполяцией в скрипт: кавычки/обратные слэши в пароле
+        # иначе ломали бы синтаксис bash.
+        CR_PASSWORD: ${{ inputs.cr-password }}
+        CR_REGISTRY: ${{ inputs.registry }}
+        CR_USERNAME: ${{ inputs.cr-username }}
+      run: echo "$CR_PASSWORD" | docker login "$CR_REGISTRY" -u "$CR_USERNAME" --password-stdin
 
     - name: Resolve digests
       id: resolve
