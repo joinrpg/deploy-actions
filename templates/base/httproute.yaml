@@ -1,0 +1,18 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: __APP_NAME__
+spec:
+  hostnames:
+    - override-me.example.com
+  parentRefs:
+    - name: main
+      namespace: infra
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: __APP_NAME__
+          port: 80

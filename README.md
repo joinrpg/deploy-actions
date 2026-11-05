@@ -8,6 +8,12 @@ Composite GitHub Actions для деплоя проектов joinrpg (Selectel 
 
 - (пока пусто — по плану docs/superpowers/plans/2026-11-03-common-deploy-actions.md в joinrpg-net)
 
+## Шаблоны
+
+`templates/base` — скелет kustomize-манифестов (Deployment, Service, HTTPRoute,
+PodDisruptionBudget, Job мигратора) для новых проектов с единой меткой
+`managed-by-kustomize=true`. См. `templates/README.md`.
+
 ## Версионирование
 
 Потребители пинуются мажорным тегом: `joinrpg/deploy-actions/<action>@v1`. Тег `v1`

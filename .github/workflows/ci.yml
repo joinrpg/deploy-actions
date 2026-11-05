@@ -193,3 +193,27 @@ jobs:
             exit 1
           }
           Write-Output "wait-migration.ps1 parses, parameterized"
+
+      - name: templates/base skeleton must exist
+        run: |
+          test -f templates/base/kustomization.yaml
+          test -f templates/base/deployment.yaml
+          test -f templates/base/service.yaml
+          test -f templates/base/httproute.yaml
+          test -f templates/base/pdp.yaml
+          test -f templates/base/migration-job.yaml
+          test -f templates/base/__APP_NAME__-secret.env
+          ! grep -rq -- '- name: bastilia-rating' templates/base
+
+      - name: templates/base renders after placeholder substitution
+        run: |
+          rm -rf /tmp/tpl /tmp/tpl-render
+          cp -r templates/base /tmp/tpl
+          cd /tmp/tpl
+          mv __APP_NAME__-secret.env fixture-app-secret.env
+          sed -i 's/__APP_NAME__/fixture-app/g' *.yaml
+          kubectl kustomize . -o /tmp/tpl-render
+          grep -q 'managed-by-kustomize: "true"' /tmp/tpl-render
+          grep -q 'name: fixture-app$' /tmp/tpl-render
+          grep -q 'name: fixture-app-secret-' /tmp/tpl-render
+          grep -q 'name: fixture-app-migrator$' /tmp/tpl-render
