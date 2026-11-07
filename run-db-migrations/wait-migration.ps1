@@ -2,8 +2,18 @@ $ErrorActionPreference = 'Stop'
 
 # Все значения приходят через env от action.yml (MIGRATION_*).
 
-#Add new generated secret, replace old migration job
-&"kubectl" "--%" "replace --force --save-config -f $env:MIGRATION_SECRET_GLOB -f $env:MIGRATION_MANIFEST -n $env:MIGRATION_NAMESPACE"
+#Add new generated secret, replace old migration job (первый прогон — create,
+#т.к. replace --force на несуществующей Job падает с NotFound)
+&"kubectl" "--%" "replace --force --save-config -f $env:MIGRATION_SECRET_GLOB -n $env:MIGRATION_NAMESPACE"
+if ($LastExitCode -ne 0) {exit $LastExitCode}
+
+&"kubectl" "--%" "get job $env:MIGRATION_JOB_NAME -n $env:MIGRATION_NAMESPACE" 2>$null | Out-Null
+if ($LastExitCode -ne 0) {
+  Write-Output "job/$env:MIGRATION_JOB_NAME not found, creating"
+  &"kubectl" "--%" "create -f $env:MIGRATION_MANIFEST -n $env:MIGRATION_NAMESPACE"
+} else {
+  &"kubectl" "--%" "replace --force --save-config -f $env:MIGRATION_MANIFEST -n $env:MIGRATION_NAMESPACE"
+}
 if ($LastExitCode -ne 0) {exit $LastExitCode}
 
 Write-Output "Waiting for job/$env:MIGRATION_JOB_NAME to be completed or failed..."

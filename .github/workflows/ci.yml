@@ -114,6 +114,77 @@ jobs:
           grep -rq 'cr.selcloud.ru/joinrpg/bastilia-rating:1.0.0@sha256:aaaa' kustomize_output
           grep -rq 'YWN0aW9uLXZhbHVl' kustomize_output
 
+      - name: render-deploy-manifests rejects multiline secrets
+        run: git checkout -- tests/fixtures/overlays/test/kustomization.yaml
+
+      - name: Run multiline fixture (must fail)
+        id: render-multiline
+        uses: ./render-deploy-manifests
+        continue-on-error: true
+        with:
+          overlay-path: tests/fixtures/overlays/test
+          secret-name: bastilia-rating-secret
+          secrets-json: '{"KUBESECRET_PEM":"line1\nline2"}'
+          images-yaml: '- name: x'
+
+      - name: Assert multiline rejection
+        run: |
+          if [ "${{ steps.render-multiline.outcome }}" != "failure" ]; then
+            echo "::error::render-deploy-manifests did not reject a multiline secret"
+            exit 1
+          fi
+
+      - name: render-deploy-manifests rejects duplicate images key
+        run: |
+          git checkout -- tests/fixtures/overlays/test/kustomization.yaml
+          overlay=/tmp/overlay-dup
+          rm -rf "$overlay"
+          cp -r tests/fixtures/overlays/test "$overlay"
+          echo 'images:' >> "$overlay/kustomization.yaml"
+
+      - name: Run duplicate-images fixture (must fail)
+        id: render-dup
+        uses: ./render-deploy-manifests
+        continue-on-error: true
+        with:
+          overlay-path: /tmp/overlay-dup
+          secret-name: bastilia-rating-secret
+          secrets-json: '{"KUBESECRET_A":"b"}'
+          images-yaml: '- name: x'
+
+      - name: Assert duplicate images rejection
+        run: |
+          if [ "${{ steps.render-dup.outcome }}" != "failure" ]; then
+            echo "::error::render-deploy-manifests did not reject duplicate images: key"
+            exit 1
+          fi
+
+      - name: render-deploy-manifests rejects duplicate secretGenerator
+        run: |
+          git checkout -- tests/fixtures/overlays/test/kustomization.yaml
+          overlay=/tmp/overlay-dup-secret
+          rm -rf "$overlay"
+          cp -r tests/fixtures/overlays/test "$overlay"
+          printf '\nsecretGenerator:\n- name: bastilia-rating-secret\n  envs:\n  - some.env\n' >> "$overlay/kustomization.yaml"
+
+      - name: Run duplicate-secretGenerator fixture (must fail)
+        id: render-dup-secret
+        uses: ./render-deploy-manifests
+        continue-on-error: true
+        with:
+          overlay-path: /tmp/overlay-dup-secret
+          secret-name: bastilia-rating-secret
+          secrets-json: '{"KUBESECRET_A":"b"}'
+          images-yaml: '- name: x'
+
+      - name: Assert duplicate secretGenerator rejection
+        run: |
+          if [ "${{ steps.render-dup-secret.outcome }}" != "failure" ]; then
+            echo "::error::render-deploy-manifests did not reject duplicate secretGenerator"
+            exit 1
+          fi
+          git checkout -- tests/fixtures/overlays/test/kustomization.yaml 2>/dev/null || true
+
       - name: apply-with-prune action must exist
         run: test -f apply-with-prune/action.yml
 

@@ -4,9 +4,18 @@ Composite GitHub Actions для деплоя проектов joinrpg (Selectel 
 
 ## Actions
 
-По мере добавления:
+| Action | Назначение |
+|---|---|
+| `setup-kubectl-context` | Установка kubectl v1.35.9 и kube-контекста из YAML Secret'а сервис-аккаунта |
+| `selectel-cr-login` | Логин в Container Registry Selectel (обёртка docker/login-action) |
+| `resolve-image-digests` | Резолвит digest'ы образов по тегу, отдаёт блок `images:` для kustomization |
+| `render-deploy-manifests` | Пишет KUBESECRET_* в .env, дописывает secretGenerator и images в kustomization, рендерит в `kustomize_output/` |
+| `apply-with-prune` | `kubectl apply --prune` с allowlist и ожиданием rollout'ов |
+| `run-db-migrations` | Прогон миграций БД как k8s-Job с ожиданием и диагностикой |
+| `calculate-version` | SemVer-версия по GitHubFlow из git-истории (ветки/теги) |
+| `publish-dotnet-containers` | Сборка образов через `dotnet publish /t:PublishContainer` и пуш в registry |
 
-- (пока пусто — по плану docs/superpowers/plans/2026-11-03-common-deploy-actions.md в joinrpg-net)
+Контракты входов/выходов — в `action.yml` каждого action.
 
 ## Шаблоны
 
