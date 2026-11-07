@@ -38,6 +38,19 @@ runs:
       run: |
         set -euo pipefail
 
+        # Многострочные значения (PEM-ключи, сертификаты) формат env-файла не
+        # поддерживает: вторая строка стала бы отдельным ключом, секрет обрезался
+        # бы до первой строки, а деплой прошёл бы «успешно». Лучше упасть здесь.
+        multiline=$(echo "$SECRETS_JSON" | jq -r --arg prefix "$PREFIX" '
+          to_entries[]
+          | select(.key | startswith($prefix))
+          | select(.value | tostring | contains("\n"))
+          | .key')
+        if [ -n "$multiline" ]; then
+          echo "::error::Секреты с многострочными значениями не поддерживаются env-форматом: $(echo "$multiline" | tr '\n' ' ')" >&2
+          exit 1
+        fi
+
         echo "$SECRETS_JSON" | jq -r --arg prefix "$PREFIX" '
           to_entries[]
           | select(.key | startswith($prefix))
@@ -48,8 +61,22 @@ runs:
 
     - name: Append secretGenerator and images to kustomization
       shell: bash
+      env:
+        KUSTOMIZATION: ${{ inputs.overlay-path }}/kustomization.yaml
+        SECRET_NAME: ${{ inputs.secret-name }}
       run: |
         set -euo pipefail
+
+        # Дубликат YAML-ключа kustomize не отклоняет — он молча берёт последний,
+        # и наш блок (дайджесты образов) выбрасывается. Падём явно.
+        if grep -qE '^images:' "$KUSTOMIZATION"; then
+          echo "::error::В $KUSTOMIZATION уже есть ключ images: — уберите его из оверлея, images подставляет render-deploy-manifests" >&2
+          exit 1
+        fi
+        if grep -qxF -- "- name: ${SECRET_NAME}" "$KUSTOMIZATION" || grep -qxF -- "  name: ${SECRET_NAME}" "$KUSTOMIZATION"; then
+          echo "::error::В $KUSTOMIZATION уже есть генератор с именем ${SECRET_NAME} — дубликат не применится" >&2
+          exit 1
+        fi
 
         {
           echo ""
@@ -61,7 +88,7 @@ runs:
           echo ""
           echo "images:"
           echo '${{ inputs.images-yaml }}'
-        } >> '${{ inputs.overlay-path }}/kustomization.yaml'
+        } >> "$KUSTOMIZATION"
 
     - name: kubectl kustomize
       shell: bash

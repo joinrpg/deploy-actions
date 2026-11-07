@@ -34,8 +34,9 @@ sed -i 's/__APP_NAME__/<app>/g' *.yaml
 ## Overlay под окружение
 
 В оверлее (`manifests/<env>`) обычно меняют `namespace`, хосты HTTPRoute через
-`patchesJson6902`, ресурсы и добавляют `images:` (либо их подставляет
-`render-deploy-manifests` на время деплоя).
+`patchesJson6902` и ресурсы. Ключ `images:` в overlay не добавляйте — его на
+время деплоя подставляет `render-deploy-manifests` (дубликат ключа action
+отклонит с ошибкой).
 
 ## Отличия от мигрированных проектов
 

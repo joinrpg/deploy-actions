@@ -22,6 +22,10 @@ inputs:
   rollout-deployments:
     description: Multiline-список имён deployment'ов для kubectl rollout status.
     required: true
+  rollout-timeout:
+    description: Таймаут ожидания rollout одного deployment'а (kubectl --timeout).
+    required: false
+    default: 10m
 
 runs:
   using: composite
@@ -50,6 +54,8 @@ runs:
           --prune-allowlist=batch/v1/Job \
           --prune-allowlist=batch/v1/CronJob \
           --prune-allowlist=gateway.networking.k8s.io/v1/HTTPRoute \
+          --prune-allowlist=networking.k8s.io/v1/Ingress \
+          --prune-allowlist=autoscaling/v2/HorizontalPodAutoscaler \
           --prune-allowlist=apps/v1/DaemonSet \
           --prune-allowlist=apps/v1/Deployment \
           --prune-allowlist=apps/v1/ReplicaSet \
@@ -62,5 +68,5 @@ runs:
 
         while IFS= read -r deployment; do
           [ -z "$deployment" ] && continue
-          kubectl rollout status "deployment/${deployment}" --namespace '${{ inputs.namespace }}'
+          kubectl rollout status "deployment/${deployment}" --namespace '${{ inputs.namespace }}' --timeout '${{ inputs.rollout-timeout }}'
         done <<< '${{ inputs.rollout-deployments }}'

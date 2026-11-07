@@ -70,7 +70,18 @@ if ($null -ne $VersionFromTag) {
     #В path-части версии счетчик коммитов от merge-base с master до версионного тега.
     }else {
         #Количество коммитов от merge-base с master до тега с версией. Бампинг path-части.
+        #Требуется полный checkout с origin/master — иначе merge-base молча даст пустую
+        #строку и версия выйдет сломанной без ошибки.
+        git rev-parse --verify --quiet origin/master | Out-Null
+        if ($LASTEXITCODE -ne 0) {
+            Write-Error "origin/master не найден. Нужен fetch-depth: 0 (полный checkout с тегами) и main-ветка с именем master."
+            exit 1
+        }
         $CommonAnchestorWithMaster = git merge-base origin/master $CurrentCommit
+        if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($CommonAnchestorWithMaster)) {
+            Write-Error "git merge-base origin/master $CurrentCommit не удался"
+            exit 1
+        }
         $CommonAnchestorWithMasterCommitsCounter = git rev-list --count "$CommonAnchestorWithMaster" "^$($VersionFromTag.TagName)"
 
         $CommitsCounter = git rev-list --count "$CurrentCommit" "^$CommonAnchestorWithMaster"
